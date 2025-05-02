@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mock API Manager</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+    }
+    label, textarea, input, button {
+      display: block;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+    textarea {
+      height: 200px;
+    }
+    .route {
+      border: 1px solid #ccc;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .route-actions {
+      display: flex;
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mock API Manager</h1>
+
+  <form id="routeForm">
+    <label>
+      API Path:
+      <input type="text" id="apiPath" placeholder="/api/example" required />
+    </label>
+    <label>
+      Response JSON:
+      <textarea id="responseJson" placeholder='{"message": "Hello"}' required></textarea>
+    </label>
+    <button type="submit">Create / Update Route</button>
+  </form>
+
+  <h2>Existing Routes</h2>
+  <div id="routeList"></div>
+
+  <script>
+    const apiPathEl = document.getElementById('apiPath');
+    const responseJsonEl = document.getElementById('responseJson');
+    const routeListEl = document.getElementById('routeList');
+  
+    async function loadRoutes() {
+      const res = await fetch('/admin/routes');
+      const routes = await res.json();
+      routeListEl.innerHTML = '';
+      for (const [path, file] of Object.entries(routes)) {
+        const routeEl = document.createElement('div');
+        routeEl.className = 'route';
+        routeEl.innerHTML = `
+          <strong>${path}</strong><br/>
+          <em>${file}</em><br/>
+          <div class="route-actions">
+            <button onclick="editRoute('${path}')">Edit</button>
+            <button onclick="deleteRoute('${path}')">Delete</button>
+            <button onclick="window.open('${path}', '_blank')">Open</button>
+          </div>
+        `;
+        routeListEl.appendChild(routeEl);
+      }
+    }
+  
+    async function editRoute(path) {
+      const res = await fetch(path);
+      const data = await res.json();
+      apiPathEl.value = path;
+      responseJsonEl.value = JSON.stringify(data, null, 2);
+      window.scrollTo(0, 0);
+    }
+  
+    async function deleteRoute(path) {
+      if (confirm(`Delete route ${path}?`)) {
+        await fetch('/admin/delete-route', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path })
+        });
+        loadRoutes();
+      }
+    }
+  
+    document.getElementById('routeForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+  
+      const path = apiPathEl.value.trim();
+      const json = responseJsonEl.value.trim();
+      const filename = path.replace(/\//g, '_').substring(1) + '.json';
+  
+      try {
+        JSON.parse(json);
+        await fetch('/admin/add-route', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, file: filename, data: json })
+        });
+        apiPathEl.value = '';
+        responseJsonEl.value = '';
+        loadRoutes();
+      } catch (err) {
+        alert('Invalid JSON!');
+      }
+    });
+  
+    loadRoutes();
+  </script>
+  
+</body>
+</html>
+
