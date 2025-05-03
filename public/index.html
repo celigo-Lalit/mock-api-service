@@ -1,119 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Mock API Manager</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock API Service</title>
+
+  <!-- Bootstrap CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- Font Awesome for Icons -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+
   <style>
     body {
-      font-family: sans-serif;
       padding: 2rem;
+      background-color: #f8f9fa;
     }
-    label, textarea, input, button {
-      display: block;
-      margin-bottom: 1rem;
-      width: 100%;
+    .table td,
+    .table th {
+      vertical-align: middle;
     }
-    textarea {
-      height: 200px;
+    .action-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #0d6efd;
     }
-    .route {
-      border: 1px solid #ccc;
-      padding: 1rem;
-      margin-top: 1rem;
+    .action-btn:hover {
+      color: #0a58ca;
     }
-    .route-actions {
-      display: flex;
-      gap: 1rem;
+    .action-btn.delete {
+      color: #dc3545;
+    }
+    .action-btn.delete:hover {
+      color: #bb2d3b;
+    }
+    .action-btn.open {
+      color: #198754;
+    }
+    .action-btn.open:hover {
+      color: #157347;
     }
   </style>
 </head>
 <body>
-  <h1>Mock API Manager</h1>
+  <div class="container">
+    <h1 class="mb-4">Mock API Service</h1>
 
-  <form id="routeForm">
-    <label>
-      API Path:
-      <input type="text" id="apiPath" placeholder="/api/example" required />
-    </label>
-    <label>
-      Response JSON:
-      <textarea id="responseJson" placeholder='{"message": "Hello"}' required></textarea>
-    </label>
-    <button type="submit">Create / Update Route</button>
-  </form>
+    <!-- Form to Add New Route -->
+    <form id="routeForm" class="mb-5">
+      <div class="mb-3">
+        <label for="apiPath" class="form-label">API Path</label>
+        <input
+          type="text"
+          class="form-control"
+          id="apiPath"
+          placeholder="/example"
+          required
+        />
+      </div>
+      <div class="mb-3">
+        <label for="responseJson" class="form-label">Response JSON</label>
+        <textarea
+          class="form-control"
+          id="responseJson"
+          rows="5"
+          placeholder='{"message": "Hello, World!"}'
+          required
+        ></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Add / Update Route</button>
+    </form>
 
-  <h2>Existing Routes</h2>
-  <div id="routeList"></div>
+    <!-- Table to Display Existing Routes -->
+    <h2 class="mb-3">Existing Routes</h2>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Route</th>
+            <th scope="col">Edit</th>
+            <th scope="col">Delete</th>
+            <th scope="col">Open</th>
+          </tr>
+        </thead>
+        <tbody id="routeList">
+          <!-- Routes will be populated here dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle (includes Popper) -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  ></script>
 
   <script>
     const apiPathEl = document.getElementById('apiPath');
     const responseJsonEl = document.getElementById('responseJson');
     const routeListEl = document.getElementById('routeList');
-  
+
+    // Function to Load Existing Routes
     async function loadRoutes() {
-      const res = await fetch('/admin/routes');
-      const routes = await res.json();
-      routeListEl.innerHTML = '';
-      for (const [path, file] of Object.entries(routes)) {
-        const routeEl = document.createElement('div');
-        routeEl.className = 'route';
-        routeEl.innerHTML = `
-          <strong>${path}</strong><br/>
-          <em>${file}</em><br/>
-          <div class="route-actions">
-            <button onclick="editRoute('${path}')">Edit</button>
-            <button onclick="deleteRoute('${path}')">Delete</button>
-            <button onclick="window.open('${path}', '_blank')">Open</button>
-          </div>
-        `;
-        routeListEl.appendChild(routeEl);
-      }
-    }
-  
-    async function editRoute(path) {
-      const res = await fetch(path);
-      const data = await res.json();
-      apiPathEl.value = path;
-      responseJsonEl.value = JSON.stringify(data, null, 2);
-      window.scrollTo(0, 0);
-    }
-  
-    async function deleteRoute(path) {
-      if (confirm(`Delete route ${path}?`)) {
-        await fetch('/admin/delete-route', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path })
-        });
-        loadRoutes();
-      }
-    }
-  
-    document.getElementById('routeForm').addEventListener('submit', async function (e) {
-      e.preventDefault();
-  
-      const path = apiPathEl.value.trim();
-      const json = responseJsonEl.value.trim();
-      const filename = path.replace(/\//g, '_').substring(1) + '.json';
-  
       try {
-        JSON.parse(json);
-        await fetch('/admin/add-route', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path, file: filename, data: json })
-        });
-        apiPathEl.value = '';
-        responseJsonEl.value = '';
-        loadRoutes();
-      } catch (err) {
-        alert('Invalid JSON!');
+        const res = await fetch('/admin/routes');
+        const routes = await res.json();
+        routeListEl.innerHTML = '';
+
+        for (const [path, file] of Object.entries(routes)) {
+          const row = document.createElement('tr');
+
+          // Route Path
+          const routeCell = document.createElement('td');
+          routeCell.textContent = path;
+          row.appendChild(routeCell);
+
+          // Edit Button
+          const editCell = document.createElement('td');
+          const editBtn = document.createElement('button');
+          editBtn.className = 'action-btn';
+          editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+          editBtn.onclick = () => editRoute(path);
+          editCell.appendChild(editBtn);
+          row.appendChild(editCell);
+
+          // Delete Button
+          const deleteCell = document.createElement('td');
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'action-btn delete';
+          deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+          deleteBtn.onclick = () => deleteRoute(path);
+          deleteCell.appendChild(deleteBtn);
+          row.appendChild(deleteCell);
+
+          // Open Link
+          const openCell = document.createElement('td');
+          const openLink = document.createElement('a');
+          openLink.href = path;
+          openLink.target = '_blank';
+          openLink.className = 'action-btn open';
+          openLink.innerHTML = '<i class="fas fa-external-link-alt"></i>';
+          openCell.appendChild(openLink);
+          row.appendChild(openCell);
+
+          routeListEl.appendChild(row);
+        }
+      } catch (error) {
+        console.error('Error loading routes:', error);
       }
-    });
-  
+    }
+
+    // Function to Edit a Route
+    async function editRoute(path) {
+      try {
+        const res = await fetch(path);
+        const data = await res.json();
+        apiPathEl.value = path;
+        responseJsonEl.value = JSON.stringify(data, null, 2);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (error) {
+        console.error('Error editing route:', error);
+      }
+    }
+
+    // Function to Delete a Route
+    async function deleteRoute(path) {
+      if (confirm(`Are you sure you want to delete the route "${path}"?`)) {
+        try {
+          await fetch('/admin/delete-route', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path }),
+          });
+          loadRoutes();
+        } catch (error) {
+          console.error('Error deleting route:', error);
+        }
+      }
+    }
+
+    // Handle Form Submission to Add/Update Route
+    document
+      .getElementById('routeForm')
+      .addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const path = apiPathEl.value.trim();
+        const json = responseJsonEl.value.trim();
+        const filename = path.replace(/\//g, '_').substring(1) + '.json';
+
+        try {
+          JSON.parse(json); // Validate JSON
+          await fetch('/admin/add-route', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path, file: filename, data: json }),
+          });
+          apiPathEl.value = '';
+          responseJsonEl.value = '';
+          loadRoutes();
+        } catch (err) {
+          alert('Invalid JSON!');
+        }
+      });
+
+    // Initial Load of Routes
     loadRoutes();
   </script>
-  
 </body>
 </html>
-
