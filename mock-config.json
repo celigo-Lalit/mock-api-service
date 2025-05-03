@@ -1,5 +1,0 @@
-{
-  "/api/hello": "api_hello.json",
-  "/api/objectArray": "api_objectArray.json",
-  "/api/orgData": "api_orgData.json"
-}
