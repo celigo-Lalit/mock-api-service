@@ -9,6 +9,22 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    .table-responsive {
+      max-height: 200px;
+      /* Adjust this value based on your row height */
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .table-responsive thead th {
+      position: sticky;
+      top: 0;
+      background-color: #fff;
+      /* Optional: to ensure the header has a background */
+      z-index: 1;
+    }
+  </style>
 </head>
 
 <body>
@@ -20,10 +36,10 @@
         <input type="text" class="form-control" id="path" placeholder="/example" required />
       </div>
       <div class="mb-3">
-        <label for="response" class="form-label">JSON Response</label>
+        <label for="response" class="form-label">JSON Response : <button type="button" class="btn btn-secondary" onclick="formatJSON()"> Format JSON </button></label>
         <textarea class="form-control" id="response" rows="5" placeholder='{"message": "Hello"}' required></textarea>
       </div>
-      <button type="submit" class="btn btn-primary">Add/Update Route </button>
+      <button type="submit" class="btn btn-primary">Save</button>
     </form>
     <h2 class="mb-3">Existing Routes</h2>
     <div class="table-responsive">
@@ -41,12 +57,72 @@
         </tbody>
       </table>
     </div>
+    <br>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="autoRefreshCheckbox" checked>
+      <label class="form-check-label" for="autoRefreshCheckbox">
+        Auto Refresh Every 2 Minutes
+      </label>
+    </div>
   </div>
 
   <!-- Bootstrap JS Bundle with Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <!-- JavaScript to handle dynamic content -->
   <script>
+    function formatJSON() {
+      const textarea = document.getElementById('response');
+      try {
+        const parsed = JSON.parse(textarea.value);
+        textarea.value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        alert('Invalid JSON: ' + e.message);
+      }
+    }
+    (function () {
+      const checkbox = document.getElementById('autoRefreshCheckbox');
+      const STORAGE_KEY = 'autoRefreshEnabled';
+      const REFRESH_INTERVAL = 120000; // 2 minutes in milliseconds
+      let refreshTimer = null;
+
+      // Initialize checkbox state from localStorage or default to true
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      const isEnabled = savedState === null ? true : savedState === 'true';
+      checkbox.checked = isEnabled;
+
+      // Function to start auto-refresh
+      function startAutoRefresh() {
+        stopAutoRefresh(); // Clear any existing timer
+        refreshTimer = setInterval(() => {
+          window.location.reload();
+        }, REFRESH_INTERVAL);
+      }
+
+      // Function to stop auto-refresh
+      function stopAutoRefresh() {
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }
+      }
+
+      // Event listener for checkbox state change
+      checkbox.addEventListener('change', () => {
+        const isChecked = checkbox.checked;
+        localStorage.setItem(STORAGE_KEY, isChecked);
+        if (isChecked) {
+          startAutoRefresh();
+        } else {
+          stopAutoRefresh();
+        }
+      });
+
+      // Start auto-refresh if enabled
+      if (isEnabled) {
+        startAutoRefresh();
+      }
+    })();
+
     document.addEventListener('DOMContentLoaded', () => {
       fetchRoutes();
     });
