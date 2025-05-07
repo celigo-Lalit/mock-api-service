@@ -186,7 +186,10 @@
 
     async function fetchRoutes() {
       try {
-        const res = await fetch('/routes');
+        pathInput.value = '';
+        editor.set(initialJson);
+        pathId = "";
+        const res = await fetch('/routes/summary');
         const routes = await res.json();
         routesTableBody.innerHTML = '';
         routes.forEach((route) => {
@@ -234,7 +237,9 @@
 
     async function editRoute(route) {
       pathInput.value = route.path;
-      editor.set(route.response);
+      const res = await fetch('/routes/' + route._id);
+      const resp = await res.json();
+      editor.set(resp.response);
       pathId = route._id;
     }
 
