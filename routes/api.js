@@ -16,7 +16,7 @@ router.get('/routes', async (req, res) => {
 // GET — returns only _id and path of each route
 router.get('/routes/summary', async (req, res) => {
     try {
-        const summary = await Route.find({}, { path: 1 });
+        const summary = await Route.find({}, { path: 1 }).sort({ path: 1 });;
         res.json(summary);
     } catch (err) {
         res.status(500).json({ message: err.message });
