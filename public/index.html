@@ -20,7 +20,6 @@
   <!-- Bootstrap JS Bundle with Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-
   <style>
     .table-responsive {
       max-height: 500px;
@@ -83,6 +82,7 @@
                 <th>Edit</th>
                 <th>Delete</th>
                 <th>Open</th>
+                <th>Clone</th>
               </tr>
             </thead>
             <tbody id="routesTableBody">
@@ -228,6 +228,15 @@
           tdOpen.appendChild(openLink);
           tr.appendChild(tdOpen);
 
+          // Clone Icon column
+          const tdClone = document.createElement('td');
+          const cloneBtn = document.createElement('button');
+          cloneBtn.className = 'btn btn-sm btn-secondary';
+          cloneBtn.innerHTML = '<i class="fas fa-clone"></i>'; // Font Awesome clone icon :contentReference[oaicite:2]{index=2}
+          cloneBtn.addEventListener('click', () => cloneRoute(route));
+          tdClone.appendChild(cloneBtn);
+          tr.appendChild(tdClone);
+
           routesTableBody.appendChild(tr);
         });
       } catch (error) {
@@ -252,8 +261,15 @@
       }
     }
 
+    async function cloneRoute(route) {
+      pathInput.value = route.path;
+      const res = await fetch('/routes/' + route._id);
+      const full = await res.json();
+      editor.set(full.response);
+      pathId = ''; // reset—so saving creates a new route, not edits existing
+    }
+    //Editor Logic
     const container = document.getElementById("jsoneditor");
-
     // Define options for the editor
     const options = {
       mode: 'code', // Start in tree mode
@@ -262,10 +278,8 @@
         alert(err.toString());
       }
     };
-
     // Create the editor
     const editor = new JSONEditor(container, options);
-
     // Set initial JSON data
     const initialJson = {
       "message": "Hello, World!",
@@ -273,7 +287,7 @@
       "items": [1, 2, 3]
     };
     editor.set(initialJson);
-
+    // Get Editor data
     function getEditedJSON() {
       try {
         const updatedJson = editor.get();
