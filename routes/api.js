@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Route = require('../models/Route');
 
+// Add ping route
+router.get('/ping', (req, res) => {
+    res.json({ message: 'pong' });
+});
+
 // Get all routes
 router.get('/routes', async (req, res) => {
     try {

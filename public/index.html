@@ -95,58 +95,14 @@
 
     <br>
     <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" id="autoRefreshCheckbox" checked>
+      <!-- <input class="form-check-input" type="checkbox" id="autoRefreshCheckbox" checked>
       <label class="form-check-label" for="autoRefreshCheckbox">
         Auto Refresh Every 2 Minutes
-      </label>
+      </label> -->
     </div>
   </div>
 
   <script>
-
-    (function () {
-      const checkbox = document.getElementById('autoRefreshCheckbox');
-      const STORAGE_KEY = 'autoRefreshEnabled';
-      const REFRESH_INTERVAL = 120000; // 2 minutes in milliseconds
-      let refreshTimer = null;
-
-      // Initialize checkbox state from localStorage or default to true
-      const savedState = localStorage.getItem(STORAGE_KEY);
-      const isEnabled = savedState === null ? true : savedState === 'true';
-      checkbox.checked = isEnabled;
-
-      // Function to start auto-refresh
-      function startAutoRefresh() {
-        stopAutoRefresh(); // Clear any existing timer
-        refreshTimer = setInterval(() => {
-          window.location.reload();
-        }, REFRESH_INTERVAL);
-      }
-
-      // Function to stop auto-refresh
-      function stopAutoRefresh() {
-        if (refreshTimer) {
-          clearInterval(refreshTimer);
-          refreshTimer = null;
-        }
-      }
-
-      // Event listener for checkbox state change
-      checkbox.addEventListener('change', () => {
-        const isChecked = checkbox.checked;
-        localStorage.setItem(STORAGE_KEY, isChecked);
-        if (isChecked) {
-          startAutoRefresh();
-        } else {
-          stopAutoRefresh();
-        }
-      });
-
-      // Start auto-refresh if enabled
-      if (isEnabled) {
-        startAutoRefresh();
-      }
-    })();
 
     // <!-- JavaScript to handle dynamic content -->
     document.addEventListener('DOMContentLoaded', () => {
@@ -299,6 +255,18 @@
       }
     }
 
+    setInterval(() => {
+      fetch('/ping')
+        .then(response => {
+          if (!response.ok) {
+            console.error('Ping failed:', response.statusText);
+          }
+        })
+        .catch(error => {
+          console.error('Error during ping:', error);
+        });
+    }, 120000);
+  
   </script>
 </body>
 
