@@ -75,7 +75,71 @@
 
 <body>
   <div class="container mt-5">
-    <h1 class="mb-4">Mock API Service</h1>
+    <!-- Auth Status Bar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Mock API Service</h1>
+      <div id="authStatus">
+        <!-- Auth buttons will be populated here -->
+      </div>
+    </div>
+
+    <!-- Login/Register Modal -->
+    <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="authModalLabel">Login</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="authError" class="alert alert-danger d-none"></div>
+            
+            <!-- Login Form -->
+            <form id="loginForm">
+              <div class="mb-3">
+                <label for="loginEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="loginEmail" required>
+              </div>
+              <div class="mb-3">
+                <label for="loginPassword" class="form-label">Password</label>
+                <input type="password" class="form-control" id="loginPassword" required>
+              </div>
+              <button type="submit" class="btn btn-primary w-100">Login</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="d-none">
+              <div class="mb-3">
+                <label for="registerName" class="form-label">Name</label>
+                <input type="text" class="form-control" id="registerName" required>
+              </div>
+              <div class="mb-3">
+                <label for="registerEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="registerEmail" required>
+              </div>
+              <div class="mb-3">
+                <label for="registerPassword" class="form-label">Password</label>
+                <input type="password" class="form-control" id="registerPassword" minlength="6" required>
+              </div>
+              <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" id="confirmPassword" minlength="6" required>
+              </div>
+              <button type="submit" class="btn btn-success w-100">Register</button>
+            </form>
+
+            <div class="text-center mt-3">
+              <button type="button" class="btn btn-link" id="toggleAuthMode">
+                Don't have an account? Register here
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content - Hidden until authenticated -->
+    <div id="mainContent" class="d-none">
     <div class="flex-container">
       <div class="flex-item form-section">
         <form id="routeForm" class="mb-4">
@@ -108,236 +172,16 @@
             </tbody>
           </table>
         </div>
+        <div id="routesContainer" class="routes-container">
+        </div>
       </div>
     </div>
+    </div> <!-- End mainContent -->
   </div>
-
-  <script>
-
-    // <!-- JavaScript to handle dynamic content -->
-    document.addEventListener('DOMContentLoaded', async () => {
-      const res = await fetch('/routes/summary');
-      const routes = await res.json();
-      renderHierarchy(buildHierarchy(routes), document.getElementById('routesTableBody'));
-    });
-
-    const form = document.getElementById('routeForm');
-    const pathInput = document.getElementById('path');
-    const routesTableBody = document.getElementById('routesTableBody');
-    pathId = "";
-
-
-    function fetchRoutes() {
-      fetch('/routes/summary')
-        .then(response => response.json())
-        .then(routes => {
-          routesTableBody.innerHTML = ''; // Clear existing rows
-          renderHierarchy(buildHierarchy(routes), routesTableBody);
-        })
-        .catch(error => console.error('Error fetching routes:', error));
-    }
-
-    function buildHierarchy(routes) {
-      const hierarchy = {};
-
-      routes.forEach(({ _id, path }) => {
-        const segments = path.split('/').filter(Boolean);
-        let currentLevel = hierarchy;
-
-        segments.forEach((segment, index) => {
-          if (!currentLevel[segment]) {
-            currentLevel[segment] = {
-              __meta__: {
-                _id: index === segments.length - 1 ? _id : null,
-                path: '/' + segments.slice(0, index + 1).join('/')
-              },
-              __children__: {}
-            };
-          }
-          currentLevel = currentLevel[segment].__children__;
-        });
-      });
-
-      return hierarchy;
-    }
-
-    function renderHierarchy(hierarchy, parentElement, parentPath = '') {
-      for (const key in hierarchy) {
-        const node = hierarchy[key];
-        const row = document.createElement('tr');
-        const cell = document.createElement('td');
-        const fullPath = node.__meta__.path;
-        const hasChildren = Object.keys(node.__children__).length > 0;
-
-        cell.style.paddingLeft = `${(fullPath.split('/').length - 2) * 20}px`;
-
-        if (hasChildren) {
-          const toggleBtn = document.createElement('span');
-          toggleBtn.textContent = '+';
-          toggleBtn.classList.add('toggle-btn');
-          toggleBtn.addEventListener('click', () => {
-            const isExpanded = toggleBtn.textContent === '-';
-            toggleBtn.textContent = isExpanded ? '+' : '-';
-
-            document.querySelectorAll(`.parent-${fullPath.replace(/\//g, '-')}`).forEach(childRow => {
-              childRow.classList.toggle('hidden', isExpanded);
-            });
-          });
-          cell.appendChild(toggleBtn);
-        } else {
-          cell.style.paddingLeft = `${(fullPath.split('/').length - 1) * 20}px`;
-        }
-
-        const textNode = document.createTextNode(fullPath);
-        cell.appendChild(textNode);
-        row.appendChild(cell);
-        row.classList.add(`parent-${parentPath.replace(/\//g, '-')}`);
-        if (parentPath) {
-          row.classList.add('hidden');
-        }
-        parentElement.appendChild(row);
-
-        if (hasChildren) {
-          renderHierarchy(node.__children__, parentElement, fullPath);
-        }
-
-        if (!hasChildren) {
-          // Edit Icon
-          const tdEdit = document.createElement('td');
-          const editBtn = document.createElement('button');
-          editBtn.className = 'btn btn-sm btn-primary';
-          editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-          editBtn.addEventListener('click', () => editRoute(node.__meta__));
-          tdEdit.appendChild(editBtn);
-          row.appendChild(tdEdit);
-
-          // Delete Icon
-          const tdDelete = document.createElement('td');
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'btn btn-sm btn-danger';
-          deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-          deleteBtn.addEventListener('click', () => deleteRoute(node.__meta__._id));
-          tdDelete.appendChild(deleteBtn);
-          row.appendChild(tdDelete);
-
-          // Open Icon
-          const tdOpen = document.createElement('td');
-          const openLink = document.createElement('a');
-          openLink.className = 'btn btn-sm btn-success';
-          openLink.innerHTML = '<i class="fas fa-external-link-alt"></i>';
-          openLink.href = node.__meta__.path;
-          openLink.target = '_blank';
-          tdOpen.appendChild(openLink);
-          row.appendChild(tdOpen);
-
-          // Clone Icon column
-          const tdClone = document.createElement('td');
-          const cloneBtn = document.createElement('button');
-          cloneBtn.className = 'btn btn-sm btn-secondary';
-          cloneBtn.innerHTML = '<i class="fas fa-clone"></i>'; // Font Awesome clone icon :contentReference[oaicite:2]{index=2}
-          cloneBtn.addEventListener('click', () => cloneRoute(node.__meta__));
-          tdClone.appendChild(cloneBtn);
-          row.appendChild(tdClone);
-        }
-
-
-      }
-    }
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const path = pathInput.value;
-      await addEditRoutes(path, getEditedJSON());
-      fetchRoutes();
-    });
-
-    async function addEditRoutes(path, response) {
-      if (pathId != "") {
-        await fetch('/routes/' + pathId, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path, response }),
-        });
-      } else {
-        await fetch('/routes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path, response }),
-        });
-      }
-      pathInput.value = '';
-      editor.set(initialJson);
-      pathId = "";
-    }
-
-    async function editRoute(route) {
-      pathInput.value = route.path;
-      const res = await fetch('/routes/' + route._id);
-      const resp = await res.json();
-      editor.set(resp.response);
-      pathId = route._id;
-    }
-
-    async function deleteRoute(id) {
-      if (confirm('Are you sure you want to delete this route?')) {
-        await fetch(`/routes/${id}`, {
-          method: 'DELETE',
-        });
-        fetchRoutes();
-      }
-    }
-
-    async function cloneRoute(route) {
-      pathInput.value = route.path;
-      const res = await fetch('/routes/' + route._id);
-      const full = await res.json();
-      editor.set(full.response);
-      pathId = ''; // reset—so saving creates a new route, not edits existing
-    }
-    //Editor Logic
-    const container = document.getElementById("jsoneditor");
-    // Define options for the editor
-    const options = {
-      mode: 'code', // Start in tree mode
-      modes: ['code', 'form', 'text', 'tree', 'view'], // Allowed modes
-      onError: function (err) {
-        alert(err.toString());
-      }
-    };
-    // Create the editor
-    const editor = new JSONEditor(container, options);
-    // Set initial JSON data
-    const initialJson = {
-      "message": "Hello, World!",
-      "status": true,
-      "items": [1, 2, 3]
-    };
-    editor.set(initialJson);
-    // Get Editor data
-    function getEditedJSON() {
-      try {
-        const updatedJson = editor.get();
-        console.log("Edited JSON:", updatedJson);
-        // You can now use updatedJson as needed
-        return updatedJson;
-      } catch (err) {
-        alert("Invalid JSON data: " + err);
-      }
-    }
-
-    setInterval(() => {
-      fetch('/ping')
-        .then(response => {
-          if (!response.ok) {
-            console.error('Ping failed:', response.statusText);
-          }
-        })
-        .catch(error => {
-          console.error('Error during ping:', error);
-        });
-    }, 120000);
-
-  </script>
+  <script src="script.js"></script>
+  <script src="script-basicAction.js"></script>
+  <script src="script-jsonEditor.js"></script>
+  <script src="script-auth.js"></script>
 </body>
 
 </html>
