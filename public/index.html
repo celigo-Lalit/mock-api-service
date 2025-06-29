@@ -21,54 +21,167 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <style>
-    .table-responsive {
-      max-height: 500px;
-      /* Adjust this value based on your row height */
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-
-    .table-responsive thead th {
-      position: sticky;
-      top: 0;
-      background-color: #fff;
-      /* Optional: to ensure the header has a background */
-      z-index: 1;
-    }
-
     .flex-container {
       display: flex;
       gap: 20px;
+      align-items: flex-start;
+    }
+
+    .flex-item {
+      box-sizing: border-box;
+      min-width: 0;
     }
 
     .form-section {
       flex: 0 0 60%;
       /* Do not grow or shrink, occupy 60% width */
-      box-sizing: border-box;
     }
 
     .table-section {
       flex: 0 0 40%;
       /* Do not grow or shrink, occupy 40% width */
+      overflow: hidden;
+    }
+
+    /* Simple Tree View Styles */
+    .tree-container {
+      border: 1px solid #d3d3d3;
+      border-radius: 4px;
+      background: white;
+      height: 500px;
+      max-height: 500px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px 0;
       box-sizing: border-box;
+      font-family: inherit;
     }
 
-    .toggle-btn {
+    .tree-item {
+      display: flex;
+      align-items: center;
+      padding: 4px 12px;
       cursor: pointer;
-      margin-right: 5px;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .indent {
-      padding-left: 20px;
-    }
-
-    .table-section2 table {
+      user-select: none;
+      min-height: 28px;
       width: 100%;
-      border-collapse: collapse;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    .tree-item:hover {
+      background-color: #f5f5f5;
+    }
+
+    .tree-expand {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 4px;
+      cursor: pointer;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .tree-expand:hover {
+      background-color: #e8e8e8;
+    }
+
+    .tree-expand i {
+      font-size: 10px;
+      color: #666;
+      transition: transform 0.2s ease;
+    }
+
+    .tree-expand.expanded i {
+      transform: rotate(90deg);
+    }
+
+    .tree-icon {
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .tree-icon i {
+      font-size: 14px;
+    }
+
+    .folder-icon {
+      color: #54a3ff;
+    }
+
+    .file-icon {
+      color: #6cc04a;
+    }
+
+    .tree-label {
+      flex: 1;
+      font-size: 13px;
+      color: #333;
+      min-width: 0;
+    }
+
+    .tree-actions {
+      display: none;
+      gap: 2px;
+      margin-left: 8px;
+    }
+
+    .tree-item:hover .tree-actions {
+      display: flex;
+    }
+
+    .action-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      background-color: #e8e8e8;
+    }
+
+    .action-btn i {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .action-btn.edit:hover i {
+      color: #1976d2;
+    }
+
+    .action-btn.delete:hover i {
+      color: #dc3545;
+    }
+
+    .action-btn.open:hover i {
+      color: #28a745;
+    }
+
+    .action-btn.clone:hover i {
+      color: #6f42c1;
+    }
+
+    .tree-children {
+      overflow: hidden;
+    }
+
+    .tree-children.collapsed {
+      display: none;
     }
   </style>
 </head>
@@ -151,29 +264,15 @@
             <label for="response" class="form-label">JSON Response</label>
             <div id="jsoneditor" style="height: 400px;"></div>
           </div>
-          <br>
           <button type="submit" class="btn btn-primary">Save</button>
         </form>
       </div>
       <div class="flex-item table-section">
-        <h2 class="mb-3">Existing Routes</h2>
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>Route</th>
-                <th>Edit</th>
-                <th>Delete</th>
-                <th>Open</th>
-                <th>Clone</th>
-              </tr>
-            </thead>
-            <tbody id="routesTableBody">
-              <!-- Routes will be populated here -->
-            </tbody>
-          </table>
-        </div>
-        <div id="routesContainer" class="routes-container">
+        <h2 class="mb-3">
+          <i class="fas fa-sitemap me-2"></i>Your API Routes
+        </h2>
+        <div class="tree-container" id="treeContainer">
+          <!-- Routes tree will be populated here -->
         </div>
       </div>
     </div>
