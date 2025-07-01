@@ -40,6 +40,12 @@ async function initializeAuth() {
 function showMainContent() {
     updateAuthStatus();
     mainContent.classList.remove('d-none');
+    
+    // Initialize JSON editor after main content is visible
+    if (typeof initializeJSONEditor === 'function') {
+        initializeJSONEditor();
+    }
+    
     // Initialize the main app functionality
     if (typeof fetchRoutes === 'function') {
         fetchRoutes();

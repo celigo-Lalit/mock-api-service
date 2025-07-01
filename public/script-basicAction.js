@@ -17,7 +17,7 @@ async function addEditRoutes(path, response) {
         
         if (apiResponse.ok) {
             pathInput.value = '';
-            editor.set(initialJson);
+            setEditorJSON(initialJson);
             pathId = "";
         } else {
             const errorData = await apiResponse.json();
@@ -36,7 +36,7 @@ async function editRoute(route) {
         if (!res) return; // User was logged out
         
         const resp = await res.json();
-        editor.set(resp.response);
+        setEditorJSON(resp.response);
         pathId = route._id;
     } catch (error) {
         console.error('Error fetching route:', error);
@@ -72,7 +72,7 @@ async function cloneRoute(route) {
         if (!res) return; // User was logged out
         
         const full = await res.json();
-        editor.set(full.response);
+        setEditorJSON(full.response);
         pathId = ''; // reset—so saving creates a new route, not edits existing
     } catch (error) {
         console.error('Error cloning route:', error);
