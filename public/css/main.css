@@ -183,4 +183,36 @@
   border-top: 1px solid #d3d3d3;
   background: #f5f5f5;
   color: #666;
+}
+
+/* Folder Sharing Styles */
+.action-btn.share {
+  color: #198754;
+}
+
+.action-btn.share:hover {
+  background-color: rgba(25, 135, 84, 0.1);
+}
+
+.user-search-result {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.user-search-result:hover {
+  background-color: #f8f9fa;
+}
+
+.folder-share-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  margin-bottom: 8px;
 } 

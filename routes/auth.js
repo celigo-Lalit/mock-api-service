@@ -134,7 +134,7 @@ router.get('/me', auth, async (req, res) => {
   try {
     res.json({
       user: {
-        id: req.user._id,
+        _id: req.user._id,
         name: req.user.name,
         email: req.user.email,
         createdAt: req.user.createdAt

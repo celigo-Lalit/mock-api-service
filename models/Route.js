@@ -9,7 +9,16 @@ const routeSchema = new mongoose.Schema({
     required: true 
   },
   name: { type: String, trim: true },
-  description: { type: String, trim: true }
+  description: { type: String, trim: true },
+  
+  // Simple folder-level sharing
+  sharedWith: [{
+    userId: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User' 
+    },
+    sharedAt: { type: Date, default: Date.now }
+  }]
 }, {
   timestamps: true
 });

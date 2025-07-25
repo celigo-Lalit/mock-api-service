@@ -89,6 +89,52 @@
       </div>
     </div>
 
+    <!-- Folder Sharing Modal -->
+    <div class="modal fade" id="folderShareModal" tabindex="-1" aria-labelledby="folderShareModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="folderShareModalLabel">
+              <i class="fas fa-share-alt me-2"></i>Share Folder
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="folderShareError" class="alert alert-danger d-none"></div>
+            <div id="folderShareSuccess" class="alert alert-success d-none"></div>
+            
+            <!-- Folder Info -->
+            <div class="mb-3">
+              <h6>Folder: <span id="shareFolderPath"></span></h6>
+              <p class="text-muted">Share this folder with another user</p>
+            </div>
+
+            <!-- Share Form -->
+            <form id="folderShareForm">
+              <div class="mb-3">
+                <label for="shareUserEmail" class="form-label">User Email</label>
+                <input type="email" class="form-control" id="shareUserEmail" placeholder="user@example.com" required>
+                <div id="userSearchResults" class="mt-2"></div>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-share"></i> Share Folder
+              </button>
+            </form>
+
+            <!-- Current Shares -->
+            <hr>
+            <h6>Currently Shared With</h6>
+            <div id="currentFolderShares">
+              <p class="text-muted">Loading...</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Content - Hidden until authenticated -->
     <div id="mainContent" class="d-none">
     <div class="flex-container">
@@ -120,6 +166,7 @@
   <script src="js/script-basicAction.js"></script>
   <script src="js/script-jsonEditor.js"></script>
   <script src="js/script-auth.js"></script>
+  <script src="js/script-folder-sharing.js"></script>
 </body>
 
 </html>

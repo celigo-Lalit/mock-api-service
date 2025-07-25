@@ -41,6 +41,10 @@ function showMainContent() {
     updateAuthStatus();
     mainContent.classList.remove('d-none');
     
+    // Store current user globally for access from other scripts
+    window.currentUser = currentUser;
+    console.log('Current user stored:', currentUser._id);
+    
     // Initialize JSON editor after main content is visible
     if (typeof initializeJSONEditor === 'function') {
         initializeJSONEditor();

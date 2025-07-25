@@ -48,17 +48,23 @@ async function fetchRoutes() {
 
 function buildHierarchy(routes) {
     const hierarchy = {};
+    
+    // Debug: Check if routes have userId field (only when needed)
+    if (routes.length > 0 && !routes[0].userId) {
+        console.log('Warning: Routes missing userId field');
+    }
 
-    routes.forEach(({ _id, path }) => {
-        const segments = path.split('/').filter(Boolean);
+    routes.forEach((route) => {
+        const segments = route.path.split('/').filter(Boolean);
         let currentLevel = hierarchy;
 
         segments.forEach((segment, index) => {
             if (!currentLevel[segment]) {
                 currentLevel[segment] = {
                     __meta__: {
-                        _id: index === segments.length - 1 ? _id : null,
-                        path: '/' + segments.slice(0, index + 1).join('/')
+                        _id: index === segments.length - 1 ? route._id : null,
+                        path: '/' + segments.slice(0, index + 1).join('/'),
+                        userId: index === segments.length - 1 ? route.userId : null
                     },
                     __children__: {}
                 };
@@ -115,9 +121,30 @@ function renderFolder(folderName, node, parentElement, level) {
     folderLabel.className = 'tree-label';
     folderLabel.textContent = folderName;
 
+    // Actions for folder
+    const actions = document.createElement('div');
+    actions.className = 'tree-actions';
+    
+    // Check if folder contains owned routes
+    const hasOwnedRoutes = checkFolderForOwnedRoutes(node);
+    
+    // Share button for folder (only if it contains owned routes)
+    if (hasOwnedRoutes) {
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'action-btn share';
+        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+        shareBtn.title = 'Share Folder';
+        shareBtn.onclick = (e) => {
+            e.stopPropagation();
+            shareFolderModal(node.__meta__.path, folderName);
+        };
+        actions.appendChild(shareBtn);
+    }
+
     folderItem.appendChild(expandBtn);
     folderItem.appendChild(folderIcon);
     folderItem.appendChild(folderLabel);
+    folderItem.appendChild(actions);
     
     parentElement.appendChild(folderItem);
 
@@ -156,31 +183,46 @@ function renderEndpoint(node, parentElement, level) {
     fileLabel.className = 'tree-label';
     fileLabel.textContent = node.__meta__.path;
 
+    // Check if this is a shared route (has userId field indicating it's not owned by current user)
+    const routeUserId = node.__meta__.userId;
+    const currentUserId = window.currentUser?._id;
+    
+    // Route is shared if:
+    // 1. It has a userId (not a legacy route)
+    // 2. Current user is logged in
+    // 3. The route's userId is different from current user's ID
+    let isSharedRoute = false;
+    
+    if (routeUserId && currentUserId) {
+        // Convert both to strings for comparison (handles ObjectId vs string)
+        const routeUserIdStr = String(routeUserId);
+        const currentUserIdStr = String(currentUserId);
+        isSharedRoute = routeUserIdStr !== currentUserIdStr;
+        
+        // Debug ownership issues only when needed
+        if (isSharedRoute && node.__meta__.path.includes('ArrayString')) {
+            console.log('Route marked as shared:', node.__meta__.path);
+        }
+    } else {
+        // If no userId on route, treat as owned (legacy routes)
+        isSharedRoute = false;
+        // This should not happen if auth is working properly
+    }
+    
+    // Add shared indicator
+    if (isSharedRoute) {
+        const sharedIcon = document.createElement('i');
+        sharedIcon.className = 'fas fa-share text-primary ms-1';
+        sharedIcon.title = 'Shared route';
+        sharedIcon.style.fontSize = '0.8em';
+        fileLabel.appendChild(sharedIcon);
+    }
+
     // Actions
     const actions = document.createElement('div');
     actions.className = 'tree-actions';
     
-    // Edit button
-    const editBtn = document.createElement('button');
-    editBtn.className = 'action-btn edit';
-    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-    editBtn.title = 'Edit';
-    editBtn.onclick = (e) => {
-        e.stopPropagation();
-        editRoute(node.__meta__);
-    };
-
-    // Delete button
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'action-btn delete';
-    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-    deleteBtn.title = 'Delete';
-    deleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        deleteRoute(node.__meta__._id);
-    };
-
-    // Open button
+    // Open button (always available)
     const openBtn = document.createElement('button');
     openBtn.className = 'action-btn open';
     openBtn.innerHTML = '<i class="fas fa-external-link-alt"></i>';
@@ -189,8 +231,34 @@ function renderEndpoint(node, parentElement, level) {
         e.stopPropagation();
         window.open(node.__meta__.path, '_blank');
     };
+    actions.appendChild(openBtn);
 
-    // Clone button
+    // Edit and Delete buttons (only for owned routes)
+    if (!isSharedRoute) {
+        // Edit button
+        const editBtn = document.createElement('button');
+        editBtn.className = 'action-btn edit';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.title = 'Edit';
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            editRoute(node.__meta__);
+        };
+        actions.appendChild(editBtn);
+
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'action-btn delete';
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        deleteBtn.title = 'Delete';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteRoute(node.__meta__._id);
+        };
+        actions.appendChild(deleteBtn);
+    }
+
+    // Clone button (always available)
     const cloneBtn = document.createElement('button');
     cloneBtn.className = 'action-btn clone';
     cloneBtn.innerHTML = '<i class="fas fa-copy"></i>';
@@ -199,10 +267,6 @@ function renderEndpoint(node, parentElement, level) {
         e.stopPropagation();
         cloneRoute(node.__meta__);
     };
-
-    actions.appendChild(editBtn);
-    actions.appendChild(deleteBtn);
-    actions.appendChild(openBtn);
     actions.appendChild(cloneBtn);
 
     endpointItem.appendChild(fileIcon);
@@ -222,6 +286,40 @@ function toggleFolder(expandBtn, childrenDiv) {
         expandBtn.classList.add('expanded');
         childrenDiv.classList.remove('collapsed');
     }
+}
+
+// Check if folder contains routes owned by current user
+function checkFolderForOwnedRoutes(node) {
+    // If this is an endpoint node, check ownership
+    if (node.__meta__._id) {
+        const routeUserId = node.__meta__.userId;
+        const currentUserId = window.currentUser?._id;
+        
+        // If no userId is set, treat as owned (legacy routes)
+        if (!routeUserId) {
+            return true;
+        }
+        
+        // Check if current user owns this route
+        const isOwned = currentUserId && String(routeUserId) === String(currentUserId);
+        return isOwned;
+    }
+    
+    // Check children recursively
+    let hasOwnedChild = false;
+    for (const key in node.__children__) {
+        if (checkFolderForOwnedRoutes(node.__children__[key])) {
+            hasOwnedChild = true;
+            break;
+        }
+    }
+    
+    // Debug only for api folder
+    if (node.__meta__.path === '/api') {
+        console.log('API folder ownership result:', hasOwnedChild);
+    }
+    
+    return hasOwnedChild;
 }
 
 // Ping the server every 2 minutes to keep the connection alive
