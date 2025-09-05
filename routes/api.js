@@ -413,13 +413,77 @@ router.get('/users/search', auth, async (req, res) => {
 // Handle dynamic routes - find from any user (public access)
 router.all('*', async (req, res) => {
     try {
-        // Find the first matching route from any user
-        // In the future, we might want to add a "isPublic" flag to routes
-        const route = await Route.findOne({ path: req.path }).sort({ createdAt: 1 });
-        if (route) {
-            res.json(route.response);
+        // Check if this is a pagination request
+        const paginationMatch = req.path.match(/^(.+)\/page\/(\d+)\/(\d+)$/);
+        
+        if (paginationMatch) {
+            const [, basePath, recordsStr, indexStr] = paginationMatch;
+            const records = parseInt(recordsStr, 10);
+            const index = parseInt(indexStr, 10);
+            
+            // Validate pagination parameters
+            if (records <= 0 || index < 0) {
+                return res.status(400).json({ 
+                    message: 'Invalid pagination parameters. Records must be > 0 and index must be >= 0' 
+                });
+            }
+            
+            // Find the route for the base path
+            const route = await Route.findOne({ path: basePath }).sort({ createdAt: 1 });
+            if (!route) {
+                return res.status(404).json({ message: 'Route not found' });
+            }
+            
+            // Check if response is an array (pagination only works with arrays)
+            if (!Array.isArray(route.response)) {
+                return res.status(400).json({ 
+                    message: 'Pagination is only supported for array responses' 
+                });
+            }
+            
+            const totalItems = route.response.length;
+            
+            // Check if index is within bounds
+            if (index >= totalItems) {
+                return res.status(400).json({ 
+                    message: `Index ${index} is out of bounds. Total items: ${totalItems}` 
+                });
+            }
+            
+            // Calculate pagination
+            const endIndex = Math.min(index + records, totalItems);
+            const paginatedData = route.response.slice(index, endIndex);
+            const hasMore = endIndex < totalItems;
+            
+            // Build response with pagination metadata
+            const response = {
+                data: paginatedData,
+                pagination: {
+                    records: records,
+                    index: index,
+                    returned: paginatedData.length,
+                    total: totalItems,
+                    hasMore: hasMore
+                }
+            };
+            
+            // Add nextUrl if there are more items
+            if (hasMore) {
+                const nextIndex = endIndex;
+                const protocol = req.get('x-forwarded-proto') || req.protocol;
+                const host = req.get('host');
+                response.nextUrl = `${protocol}://${host}${basePath}/page/${records}/${nextIndex}`;
+            }
+            
+            res.json(response);
         } else {
-            res.status(404).json({ message: 'Route not found' });
+            // Regular route handling (non-paginated)
+            const route = await Route.findOne({ path: req.path }).sort({ createdAt: 1 });
+            if (route) {
+                res.json(route.response);
+            } else {
+                res.status(404).json({ message: 'Route not found' });
+            }
         }
     } catch (err) {
         console.error('Dynamic route error:', err);
