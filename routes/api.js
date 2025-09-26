@@ -466,6 +466,47 @@ router.all('*', async (req, res) => {
                 });
             }
             
+            // Random error simulation (10% chance of various errors)
+            const randomValue = Math.random() * 100;
+            
+            if (randomValue < 2) { // 2% chance
+                return res.status(429).json({
+                    message: 'Rate limit exceeded. Too many requests.',
+                    errorType: 'RATE_LIMIT_ERROR',
+                    retryAfter: 60,
+                    requestedIndex: index,
+                    errorIndex: errorIndex
+                });
+            } else if (randomValue < 4) { // 2% chance
+                return res.status(503).json({
+                    message: 'Service temporarily unavailable. Please try again later.',
+                    errorType: 'SERVICE_UNAVAILABLE',
+                    requestedIndex: index,
+                    errorIndex: errorIndex
+                });
+            } else if (randomValue < 6) { // 2% chance
+                return res.status(408).json({
+                    message: 'Request timeout. The server took too long to respond.',
+                    errorType: 'REQUEST_TIMEOUT',
+                    requestedIndex: index,
+                    errorIndex: errorIndex
+                });
+            } else if (randomValue < 8) { // 2% chance
+                return res.status(502).json({
+                    message: 'Bad gateway. Upstream server error.',
+                    errorType: 'BAD_GATEWAY',
+                    requestedIndex: index,
+                    errorIndex: errorIndex
+                });
+            } else if (randomValue < 10) { // 2% chance
+                return res.status(403).json({
+                    message: 'Access forbidden. You do not have permission to access this resource.',
+                    errorType: 'FORBIDDEN_ACCESS',
+                    requestedIndex: index,
+                    errorIndex: errorIndex
+                });
+            }
+            
             // Calculate pagination
             const endIndex = Math.min(index + records, totalItems);
             const paginatedData = route.response.slice(index, endIndex);
