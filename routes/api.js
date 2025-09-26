@@ -457,6 +457,7 @@ router.all('*', async (req, res) => {
             
             // Build response with pagination metadata
             const response = {
+                id: Date.now(), // Unique epoch time ID
                 data: paginatedData,
                 pagination: {
                     records: records,
@@ -467,13 +468,11 @@ router.all('*', async (req, res) => {
                 }
             };
             
-            // Add nextUrl if there are more items
-            if (hasMore) {
-                const nextIndex = endIndex;
-                const protocol = req.get('x-forwarded-proto') || req.protocol;
-                const host = req.get('host');
-                response.nextUrl = `${protocol}://${host}${basePath}/page/${records}/${nextIndex}`;
-            }
+            // Always add nextUrl
+            const nextIndex = endIndex;
+            const protocol = req.get('x-forwarded-proto') || req.protocol;
+            const host = req.get('host');
+            response.nextUrl = `${protocol}://${host}${basePath}/page/${records}/${nextIndex}`;
             
             res.json(response);
         } else {
