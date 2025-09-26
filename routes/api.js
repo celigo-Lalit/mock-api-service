@@ -413,10 +413,90 @@ router.get('/users/search', auth, async (req, res) => {
 // Handle dynamic routes - find from any user (public access)
 router.all('*', async (req, res) => {
     try {
-        // Check if this is a pagination request
-        const paginationMatch = req.path.match(/^(.+)\/page\/(\d+)\/(\d+)$/);
+        // Check if this is a perror request (pagination with error at specified index)
+        const perrorMatch = req.path.match(/^(.+)\/perror\/(\d+)\/(\d+)\/(\d+)$/);
         
-        if (paginationMatch) {
+        if (perrorMatch) {
+            const [, basePath, recordsStr, indexStr, errorIndexStr] = perrorMatch;
+            const records = parseInt(recordsStr, 10);
+            const index = parseInt(indexStr, 10);
+            const errorIndex = parseInt(errorIndexStr, 10);
+            
+            // Validate parameters
+            if (records <= 0 || index < 0 || errorIndex < 0) {
+                return res.status(400).json({ 
+                    message: 'Invalid perror parameters. Records must be > 0, index must be >= 0, and errorIndex must be >= 0' 
+                });
+            }
+            
+            // Check if we should throw an error when pagination reaches or exceeds error index
+            if (index + records >= errorIndex) {
+                return res.status(500).json({ 
+                    message: `Simulated error: pagination range [${index}, ${index + records - 1}] reaches or exceeds error index ${errorIndex}`,
+                    errorType: 'PERROR_SIMULATION',
+                    requestedIndex: index,
+                    records: records,
+                    errorIndex: errorIndex,
+                    paginationRange: {
+                        start: index,
+                        end: index + records - 1
+                    }
+                });
+            }
+            
+            // Find the route for the base path
+            const route = await Route.findOne({ path: basePath }).sort({ createdAt: 1 });
+            if (!route) {
+                return res.status(404).json({ message: 'Route not found' });
+            }
+            
+            // Check if response is an array (pagination only works with arrays)
+            if (!Array.isArray(route.response)) {
+                return res.status(400).json({ 
+                    message: 'Perror pagination is only supported for array responses' 
+                });
+            }
+            
+            const totalItems = route.response.length;
+            
+            // Check if index is within bounds
+            if (index >= totalItems) {
+                return res.status(400).json({ 
+                    message: `Index ${index} is out of bounds. Total items: ${totalItems}` 
+                });
+            }
+            
+            // Calculate pagination
+            const endIndex = Math.min(index + records, totalItems);
+            const paginatedData = route.response.slice(index, endIndex);
+            const hasMore = endIndex < totalItems;
+            
+            // Build response with pagination metadata
+            const response = {
+                id: Date.now(), // Unique epoch time ID
+                data: paginatedData,
+                pagination: {
+                    records: records,
+                    index: index,
+                    returned: paginatedData.length,
+                    total: totalItems,
+                    hasMore: hasMore,
+                    errorIndex: errorIndex // Include error index in metadata
+                }
+            };
+            
+            // Always add nextUrl
+            const nextIndex = endIndex;
+            const protocol = req.get('x-forwarded-proto') || req.protocol;
+            const host = req.get('host');
+            response.nextUrl = `${protocol}://${host}${basePath}/perror/${records}/${nextIndex}/${errorIndex}`;
+            
+            res.json(response);
+        }
+        // Check if this is a pagination request
+        else if (req.path.match(/^(.+)\/page\/(\d+)\/(\d+)$/)) {
+            const paginationMatch = req.path.match(/^(.+)\/page\/(\d+)\/(\d+)$/);
+            
             const [, basePath, recordsStr, indexStr] = paginationMatch;
             const records = parseInt(recordsStr, 10);
             const index = parseInt(indexStr, 10);
