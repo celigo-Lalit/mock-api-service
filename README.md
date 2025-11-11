@@ -7,6 +7,7 @@ A powerful and flexible mock API service with route management, authentication, 
 - **Dynamic Route Management** - Create, update, and delete custom API endpoints
 - **User Authentication** - JWT-based authentication with multiple auth methods
 - **Advanced Pagination** - Built-in pagination with metadata and navigation URLs
+- **Query Filtering** - Filter array responses using query parameters with `_gt` operator
 - **Error Simulation** - Special endpoints for testing error scenarios
 - **Route Sharing** - Share API routes and folders with team members
 - **Web Interface** - Complete web UI for managing routes and testing APIs
@@ -19,6 +20,7 @@ A powerful and flexible mock API service with route management, authentication, 
 - [Authentication](#authentication)
 - [API Endpoints](#api-endpoints)
 - [Pagination](#pagination)
+- [Query Filtering](#query-filtering)
 - [Error Simulation](#error-simulation)
 - [Route Sharing](#route-sharing)
 - [Web Interface](#web-interface)
@@ -251,6 +253,110 @@ GET /api/users/page/5/0
 - ✅ **Array Support** - Works with any endpoint that returns an array
 - ✅ **Boundary Handling** - Proper handling of last page and out-of-bounds requests
 
+## 🔍 Query Filtering
+
+Filter array responses using query parameters with the `_gt` (greater than or equal) operator.
+
+### Basic Filtering
+
+Add query parameters to any endpoint that returns an array:
+
+```http
+GET /api/users?age_gt=25
+GET /api/products?price_gt=100
+GET /api/orders?total_gt=50.5
+```
+
+### Filtering Syntax
+
+Use the `fieldName_gt=value` pattern:
+
+- `fieldName` - The field to filter on
+- `_gt` - Greater than or equal operator (>=)
+- `value` - The value to compare against
+
+### Supported Data Types
+
+#### Numeric Filtering
+```http
+GET /api/users?age_gt=25
+GET /api/products?price_gt=99.99
+GET /api/scores?rating_gt=4.5
+```
+
+#### String Filtering (Lexicographic)
+```http
+GET /api/users?name_gt=M
+GET /api/products?category_gt=Electronics
+```
+
+#### Date Filtering
+```http
+GET /api/orders?createdAt_gt=2023-01-01
+GET /api/events?startDate_gt=2023-12-25
+```
+
+### Multiple Filters
+
+Combine multiple filters - all conditions must be met (AND logic):
+
+```http
+GET /api/users?age_gt=25&score_gt=80
+GET /api/products?price_gt=50&rating_gt=4.0
+```
+
+### Filtering with Pagination
+
+Query filters work seamlessly with pagination:
+
+```http
+GET /api/users/page/5/0?age_gt=25
+GET /api/products/perror/10/0/50?price_gt=100
+```
+
+**Response:**
+```json
+{
+  "id": 1609459200000,
+  "data": [
+    {"id": 2, "name": "Bob", "age": 30},
+    {"id": 4, "name": "David", "age": 35}
+  ],
+  "pagination": {
+    "records": 5,
+    "index": 0,
+    "returned": 2,
+    "total": 8,
+    "hasMore": true
+  },
+  "nextUrl": "https://yourdomain.com/api/users/page/5/5?age_gt=25"
+}
+```
+
+### Filtering Features
+
+- ✅ **Multiple Data Types** - Numbers, strings, dates
+- ✅ **Pagination Compatible** - Works with both `/page/` and `/perror/` endpoints
+- ✅ **Multiple Filters** - Combine multiple conditions
+- ✅ **Type Auto-Detection** - Automatic type conversion for comparisons
+- ✅ **Non-Array Safe** - Gracefully handles non-array responses
+
+### Example Use Cases
+
+```bash
+# Get users older than 25
+curl "http://localhost:3000/api/users?age_gt=25"
+
+# Get products over $100 with pagination
+curl "http://localhost:3000/api/products/page/10/0?price_gt=100"
+
+# Get high-rated products (multiple filters)
+curl "http://localhost:3000/api/products?rating_gt=4.0&price_gt=50"
+
+# Test error scenarios with filtering
+curl "http://localhost:3000/api/users/perror/5/0/10?age_gt=30"
+```
+
 ## 🚨 Error Simulation
 
 ### Perror Endpoint
@@ -389,6 +495,12 @@ curl http://localhost:3000/api/users/page/2/0
 
 # Test error scenarios
 curl http://localhost:3000/api/users/perror/1/2/3
+
+# Use query filtering
+curl "http://localhost:3000/api/users?age_gt=25"
+
+# Combine filtering with pagination
+curl "http://localhost:3000/api/users/page/2/0?age_gt=25"
 ```
 
 ### Example 2: E-commerce API
@@ -417,6 +529,9 @@ curl -X POST http://localhost:3000/api/routes \
       {"id": 2, "name": "Clothing"}
     ]
   }'
+
+# Use filtering on products
+curl "http://localhost:3000/api/products?price_gt=500"
 ```
 
 ### Example 3: Error Testing

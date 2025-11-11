@@ -4,6 +4,75 @@ const Route = require('../models/Route');
 const { auth, optionalAuth } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
 
+// Helper function to check if a value is a valid date string
+function isDateString(value) {
+    if (typeof value !== 'string') return false;
+    
+    // Check for ISO datetime format (YYYY-MM-DDTHH:mm:ss.sssZ or similar)
+    const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+    if (isoDateRegex.test(value)) {
+        return !isNaN(new Date(value).getTime());
+    }
+    
+    // Check for other common date formats
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
+    if (dateRegex.test(value)) {
+        return !isNaN(new Date(value).getTime());
+    }
+    
+    return false;
+}
+
+// Helper function to apply query filters
+function applyQueryFilters(data, queryParams) {
+    if (!Array.isArray(data)) {
+        return data;
+    }
+    
+    let filteredData = [...data];
+    
+    // Process each query parameter
+    Object.keys(queryParams).forEach(key => {
+        if (key.endsWith('_gt')) {
+            const fieldName = key.replace('_gt', '');
+            const filterValue = queryParams[key];
+            
+            // Filter data where fieldName >= value
+            filteredData = filteredData.filter(item => {
+                if (item && typeof item === 'object' && item.hasOwnProperty(fieldName)) {
+                    const itemValue = item[fieldName];
+                    
+                    // Handle date/datetime comparisons first (highest priority)
+                    if (itemValue instanceof Date || isDateString(itemValue) || isDateString(filterValue)) {
+                        const itemDate = new Date(itemValue);
+                        const filterDate = new Date(filterValue);
+                        
+                        // Check if both dates are valid
+                        if (!isNaN(itemDate.getTime()) && !isNaN(filterDate.getTime())) {
+                            return itemDate >= filterDate;
+                        }
+                    }
+                    
+                    // Handle numeric comparisons
+                    const itemNum = Number(itemValue);
+                    const filterNum = Number(filterValue);
+                    if (!isNaN(itemNum) && !isNaN(filterNum) && typeof itemValue === 'number') {
+                        return itemNum >= filterNum;
+                    }
+                    
+                    // Handle string comparisons (lexicographic) - only if not numeric
+                    if (typeof itemValue === 'string' && typeof filterValue === 'string' && isNaN(filterValue)) {
+                        return itemValue >= filterValue;
+                    }
+                }
+                return false;
+            });
+        }
+    });
+    
+    return filteredData;
+}
+
 // Helper function to check if parent folder is shared and get sharing info
 async function getParentFolderSharing(newRoutePath, userId) {
     try {
@@ -457,7 +526,9 @@ router.all('*', async (req, res) => {
                 });
             }
             
-            const totalItems = route.response.length;
+            // Apply query filters to the response data
+            const filteredResponse = applyQueryFilters(route.response, req.query);
+            const totalItems = filteredResponse.length;
             
             // Check if index is within bounds
             if (index >= totalItems) {
@@ -509,7 +580,7 @@ router.all('*', async (req, res) => {
             
             // Calculate pagination
             const endIndex = Math.min(index + records, totalItems);
-            const paginatedData = route.response.slice(index, endIndex);
+            const paginatedData = filteredResponse.slice(index, endIndex);
             const hasMore = endIndex < totalItems;
             
             // Build response with pagination metadata
@@ -562,7 +633,9 @@ router.all('*', async (req, res) => {
                 });
             }
             
-            const totalItems = route.response.length;
+            // Apply query filters to the response data
+            const filteredResponse = applyQueryFilters(route.response, req.query);
+            const totalItems = filteredResponse.length;
             
             // Check if index is within bounds
             if (index >= totalItems) {
@@ -573,7 +646,7 @@ router.all('*', async (req, res) => {
             
             // Calculate pagination
             const endIndex = Math.min(index + records, totalItems);
-            const paginatedData = route.response.slice(index, endIndex);
+            const paginatedData = filteredResponse.slice(index, endIndex);
             const hasMore = endIndex < totalItems;
             
             // Build response with pagination metadata
@@ -600,7 +673,9 @@ router.all('*', async (req, res) => {
             // Regular route handling (non-paginated)
             const route = await Route.findOne({ path: req.path }).sort({ createdAt: 1 });
             if (route) {
-                res.json(route.response);
+                // Apply query filters to the response data
+                const filteredResponse = applyQueryFilters(route.response, req.query);
+                res.json(filteredResponse);
             } else {
                 res.status(404).json({ message: 'Route not found' });
             }
